@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='abtest-sdk',
-    version='1.0.0',  # 版本号
+    version='1.0.3',  # 版本号
     description='ab SDK for phoenix',  # 描述
     author='',
     author_email='',
