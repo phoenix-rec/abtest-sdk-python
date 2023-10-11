@@ -9,7 +9,6 @@ from abtest.ab_client import ABClient
 
 client = ABClient()
 
-
 def init_client(project_id, kwargs):
     opt = {
         "Hostport": const.DEFAULT_AB_CONFIG_HOST,

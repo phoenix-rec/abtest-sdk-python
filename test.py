@@ -1,5 +1,5 @@
 import unittest
-import abtest_builder
+from abtest import abtest_builder
 
 class MyTestCase(unittest.TestCase):
     def test_ab(self):
