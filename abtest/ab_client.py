@@ -48,14 +48,19 @@ class ABClient:
         return self.ticker and not self.close_event.is_set()
 
     def update(self):
-        remote_info_map, err = self.remote_info_map()
-        if err:
+        try:
+            remote_info_map, err = self.remote_info_map()
+            if err:
+                raise ValueError("update A/B info is failed")
+
+            if not remote_info_map:
+                raise ValueError("All A/B info is None")
+
+        except Exception as e:
+            print(f"Error in update: {e}")
             return
 
-        if not remote_info_map:
-            return
-
-        #print(f"{len(remote_info_map)} project experiment(s) to update")
+        # print(f"{len(remote_info_map)} project experiment(s) to update")
 
         self.err_count = 0
         with self.mutex:
@@ -82,7 +87,7 @@ class ABClient:
         try:
             resp = self.get_config_list(param)
             if resp.get("ret") != 1 or not resp.get("data"):
-                raise Exception(f"unexpected resp: {resp}")
+                raise Exception(f"get_config_list unexpected resp: {resp}")
 
             for project_id, exp_list in resp["data"]["config_list_map"].items():
                 info_map = {}
@@ -93,6 +98,7 @@ class ABClient:
             self.ut = resp["data"]["time"]
 
         except Exception as e:
+            print(f"Error in remote_info_map: {e}")
             return None, e
 
         return project_info_map, None
@@ -152,13 +158,13 @@ class ABClient:
         return experiment_info.GetConfig(user_id)
 
     def get_key(self, user_id, exp_name, key_name, result):
-        if not self.is_running():
-            return
-
         try:
+            if not self.is_running():
+                raise ValueError("client stopped")
+
             config = self.get_experiment(user_id, exp_name)
             if not config:
-                return
+                raise ValueError("experiment not found")
 
             if key_name not in config:
                 raise ValueError("key not found")
@@ -179,16 +185,26 @@ class ABClient:
             headers = {"Content-Type": "application/json"}
             response = self.ab_adapter.post(url, data=http_body, headers=headers)
             response.raise_for_status()
-            return response.content
-
+            if not response.content:
+                raise ValueError("abtest api resp is None")
+            else:
+                return response.content
+        except requests.exceptions.RequestException as request_exception:
+            print(f"Network request error: {request_exception}")
+            return None
         except Exception as e:
             print(f"apiRequest err: {e}")
             return None
 
     def get_config_list(self, param):
-        url = f"{self.hostport}{const.DEFAULT_AB_API_PATH}"
-        data = json.dumps(param)
-        resp = self.api_request(url, data)
-        if resp:
-            return json.loads(resp.decode('utf-8'))
-        return {}
+        try:
+            url = f"{self.hostport}{const.DEFAULT_AB_API_PATH}"
+            data = json.dumps(param)
+            resp = self.api_request(url, data)
+            if resp:
+                return json.loads(resp.decode('utf-8'))
+            else:
+                raise ValueError("abtest api resp is None")
+        except Exception as e:
+            print(f"Error in get_config_list err: {e}")
+            return {}
